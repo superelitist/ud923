@@ -25,8 +25,8 @@
 
 #define NUMBER_OF_READERS 5
 #define NUMBER_OF_WRITERS 5
-#define ever ; ;
-#define five_iterations unsigned i = 1; i < 6; i++
+#define NUMBER_OF_READS 10
+#define NUMBER_OF_WRITES 2
 
 __u_long shared_variable = 0;
 
@@ -41,13 +41,14 @@ unsigned GetFromUniformIntegerDistribution(unsigned min, unsigned max) { // shou
 
 void *ReaderThread (void *vargp) {
     __u_long pthread_id = *((__u_long*)vargp); // get our id once when we init
-    for (five_iterations) { // as defined above
-        usleep(GetFromUniformIntegerDistribution(1, 1500)); // wait some time before acting
+    for (unsigned i = 1; i < NUMBER_OF_READS + 1; i++) { // as defined above
+        usleep(GetFromUniformIntegerDistribution(1, 10000)); // wait some time before acting
         pthread_mutex_lock(&counter_mutex); // acquire the mutex
         while (resource_counter == -1) pthread_cond_wait(&read_phase, &counter_mutex); // wait for a read_phase
         resource_counter++; // indicate that we are about to begin reading the shared_variable
         pthread_mutex_unlock(&counter_mutex); // release the mutex
 
+        usleep(GetFromUniformIntegerDistribution(1, 1000)); // fake work
         printf("%lu(i=%u) read: %lu, resource_counter: %i\n", pthread_id, i, shared_variable, resource_counter);
         
         pthread_mutex_lock(&counter_mutex); // acquire the mutex
@@ -60,13 +61,14 @@ void *ReaderThread (void *vargp) {
 
 void *WriterThread(void *vargp) {
     __u_long pthread_id = pthread_self(); // take your pick--the former is probably faster though?
-    for (five_iterations) { // as defined above
-        usleep(GetFromUniformIntegerDistribution(1, 10)); // wait some time before acting
+    for (unsigned i = 1; i < NUMBER_OF_WRITES + 1; i++) { // as defined above
+        usleep(GetFromUniformIntegerDistribution(1, 1000)); // wait some time before acting
         pthread_mutex_lock(&counter_mutex); // acquire the mutex
         while (resource_counter != 0) pthread_cond_wait(&write_phase, &counter_mutex); // wait for a write_phase
         resource_counter = -1; // indicate that we are about to write to the shared_variable
         pthread_mutex_unlock(&counter_mutex); // release the mutex
 
+        usleep(GetFromUniformIntegerDistribution(1, 100)); // fake work
         shared_variable = pthread_id; // do the thing.
         printf("%lu(i=%u) WRITE: %lu, resource_counter: %i\n", pthread_id, i, shared_variable, resource_counter);
         
@@ -84,7 +86,7 @@ int main (void) {
     pthread_t reader_id[NUMBER_OF_READERS], writer_id[NUMBER_OF_WRITERS]; // implicit init
     int error;
     for (int i = 0; i < NUMBER_OF_READERS; i++) { // create our reader threads
-        error = pthread_create(&reader_id[i], NULL , ReaderThread, &reader_id[i]);
+        error = pthread_create(&reader_id[i], NULL , &ReaderThread, &reader_id[i]);
         if (error) { printf("\nThread can't be created :[%s]\n", strerror(error)); }
     }
     for (int i = 0; i < NUMBER_OF_WRITERS; i++) { // create our writer threads
