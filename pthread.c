@@ -23,10 +23,10 @@
 #include <time.h>
 #include <math.h>
 
-#define NUMBER_OF_READERS 5
+#define NUMBER_OF_READERS 10
 #define NUMBER_OF_WRITERS 5
-#define NUMBER_OF_READS 10
-#define NUMBER_OF_WRITES 2
+#define NUMBER_OF_READS 5
+#define NUMBER_OF_WRITES 3
 
 __u_long shared_variable = 0;
 
