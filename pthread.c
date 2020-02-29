@@ -33,6 +33,7 @@ __u_long shared_variable = 0;
 pthread_mutex_t counter_mutex = PTHREAD_MUTEX_INITIALIZER; // init statically
 pthread_cond_t read_phase = PTHREAD_COND_INITIALIZER, write_phase = PTHREAD_COND_INITIALIZER; // same
 int resource_counter;
+__u_long readers_waiting;
 
 unsigned GetFromUniformIntegerDistribution(unsigned min, unsigned max) { // should be self-explanatory
     srand((unsigned int)time(NULL)); // seed our PRNG. This should normally go at the top of main(), but I have my reasons...
@@ -44,8 +45,10 @@ void *ReaderThread (void *vargp) {
     for (unsigned i = 1; i < NUMBER_OF_READS + 1; i++) { // as defined above
         usleep(GetFromUniformIntegerDistribution(1, 10000)); // wait some time before acting
         pthread_mutex_lock(&counter_mutex); // acquire the mutex
+        readers_waiting++;
         while (resource_counter == -1) pthread_cond_wait(&read_phase, &counter_mutex); // wait for a read_phase
         resource_counter++; // indicate that we are about to begin reading the shared_variable
+        readers_waiting--;
         pthread_mutex_unlock(&counter_mutex); // release the mutex
 
         usleep(GetFromUniformIntegerDistribution(1, 1000)); // fake work
